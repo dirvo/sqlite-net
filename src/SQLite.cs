@@ -1709,7 +1709,17 @@ namespace SQLite
                 _prop = prop;
                 Name = colAttr == null ? prop.Name : colAttr.Name;
                 //If this type is Nullable<T> then Nullable.GetUnderlyingType returns the T, otherwise it returns null, so get the actual type instead
-                ColumnType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                var columnType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+#if !NETFX_CORE
+                if (columnType.IsEnum)
+#else
+                if (columnType.GetTypeInfo().IsEnum)
+#endif
+                {
+                    // FIX for https://github.com/praeclarum/sqlite-net/issues/33
+                    columnType = Enum.GetUnderlyingType(prop.PropertyType);
+                }
+                ColumnType = columnType;
                 Collation = Orm.Collation(prop);
 
                 IsPK = Orm.IsPK(prop) ||
